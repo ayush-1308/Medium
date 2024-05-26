@@ -67,7 +67,9 @@ app.post('/api/v1/user/signin',async (c) => {
 	}
 
 	const jwt = await sign({ id: user.id }, c.env.JWT_SECRET);
-	return c.json({ jwt });
+  // @ts-ignore
+  c.res.cookie('token', jwt, { httpOnly: true, secure: true, sameSite: 'Strict' });
+  c.res.json();
 })
 
 app.post('/api/v1/blog', (c) => {

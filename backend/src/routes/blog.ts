@@ -19,7 +19,7 @@ blogRouter.use('/*', async (c, next) => {
     if(response){
         
         c.set("userId", response.id as string)
-        next()
+        await next()
     } else {
         c.status(401)
         return c.json({
@@ -68,6 +68,7 @@ blogRouter.put('/',async (c) => {
 })
 
 blogRouter.get('/:id', async (c) => {
+    const id = c.req.param("id");
     const body = await c.req.json();
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,
@@ -76,7 +77,7 @@ blogRouter.get('/:id', async (c) => {
     try {
         const blog = await prisma.post.findFirst({
          where: {
-             id: body.id
+             id: id
            },
          })
          return c.json({

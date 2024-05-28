@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { PrismaClient } from '@prisma/client/edge'
 import { withAccelerate } from '@prisma/extension-accelerate'
 import { decode, verify } from "hono/jwt";
+import { createBlogInput, updateBlogInput } from "@ayush__2002/medium-common";
 
 export const blogRouter = new Hono<{
     Bindings: {
@@ -49,6 +50,17 @@ blogRouter.post('/',async (c) => {
 
 blogRouter.put('/',async (c) => {
     const body = await c.req.json();
+    const { success } = createBlogInput.safeParse(body);
+
+    if (!success) {
+        c.status(411);
+        return c.json({
+            message: "Inputs not correct"
+        })
+    }
+
+    const authorId = c.get("userId");
+
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate())
@@ -69,24 +81,35 @@ blogRouter.put('/',async (c) => {
 
 blogRouter.get('/:id', async (c) => {
     const id = c.req.param("id");
-    const body = await c.req.json();
     const prisma = new PrismaClient({
-        datasourceUrl: c.env.DATABASE_URL,
+      datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate())
 
     try {
         const blog = await prisma.post.findFirst({
-         where: {
-             id: id
-           },
-         })
-         return c.json({
-             blog
-         })
-    } catch (error) {
-        return c.json({
-            error: "Blog not found"
+            where: {
+                id: id
+            },
+            select: {
+                id: true,
+                title: true,
+                content: true,
+                author: {
+                    select: {
+                        name: true
+                    }
+                }
+            }
         })
+    
+        return c.json({
+            blog
+        });
+    } catch(e) {
+        c.status(411); // 4
+        return c.json({
+            message: "Error while fetching blog post"
+        });
     }
 })
 
@@ -95,15 +118,17 @@ blogRouter.get('/bulk', async (c) => {
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate())
-
-    // @ts-ignore
-    const page = Number(c.query.page) || 1;
-    // @ts-ignore
-    const pageSize = Number(c.query.pageSize) || 10;
-
     const blogs = await prisma.post.findMany({
-        skip: (page - 1) * pageSize,
-        take: pageSize,
+        select: {
+            content: true,
+            title: true,
+            id: true,
+            author: {
+                select: {
+                    name: true
+                }
+            }
+        }
     });
 
     return c.json({

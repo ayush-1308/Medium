@@ -20,8 +20,8 @@ export const Auth = ({ type }: { type: 'signup' | 'signin' }) => {
        const jwt = response.data;
        localStorage.setItem('jwt', jwt)
        navigate('/blogs')
-    } catch (error) {
-        console.log(error)    
+    } catch (error: any) {
+        alert("Error occured + " + error.message)   
     }
   }
 
@@ -56,7 +56,7 @@ export const Auth = ({ type }: { type: 'signup' | 'signin' }) => {
               onChange={e => {
                 setPostInputs({
                   ...postInputs,
-                  name: e.target.value
+                  email: e.target.value
                 })
               }}
             />
@@ -67,7 +67,7 @@ export const Auth = ({ type }: { type: 'signup' | 'signin' }) => {
               onChange={e => {
                 setPostInputs({
                   ...postInputs,
-                  name: e.target.value
+                  password: e.target.value
                 })
               }}
             />

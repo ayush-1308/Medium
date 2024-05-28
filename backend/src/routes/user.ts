@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client/edge'
 import { withAccelerate } from '@prisma/extension-accelerate'
 import { decode, sign, verify } from 'hono/jwt'
 import { Bindings } from "hono/types";
-import { signUpInput } from "@ayush__2002/medium-common";
+import { signinInput, signUpInput } from "@ayush__2002/medium-common";
 
 
 export const userRouter = new Hono<{
@@ -28,6 +28,7 @@ if(!success){
   
   const user = await prisma.user.create({
     data: {
+      name: body.name,
       email: body.email,
       password: body.password,
     },
@@ -40,25 +41,41 @@ if(!success){
   })
   
   userRouter.post('/signin',async (c) => {
+    
+    const body = await c.req.json();
+    const { success } = signinInput.safeParse(body);
+    if (!success) {
+        c.status(411);
+        return c.json({
+            message: "Inputs not correct"
+        })
+    }
+
     const prisma = new PrismaClient({
-          datasourceUrl: c.env?.DATABASE_URL	,
-      }).$extends(withAccelerate());
+      datasourceUrl: c.env.DATABASE_URL,
+    }).$extends(withAccelerate())
   
-      const body = await c.req.json();
-      const user = await prisma.user.findUnique({
-          where: {
-              email: body.email,
-        password: body.password,
-          }
-      });
-  
+    try {
+      const user = await prisma.user.findFirst({
+        where: {
+          email: body.email,
+          password: body.password,
+        }
+      })
       if (!user) {
-          c.status(403);
-          return c.json({ error: "user not found" });
+        c.status(403);
+        return c.json({
+          message: "Incorrect creds"
+        })
       }
+      const jwt = await sign({
+        id: user.id
+      }, c.env.JWT_SECRET);
   
-      const jwt = await sign({ id: user.id }, c.env.JWT_SECRET);
-    // @ts-ignore
-    c.res.cookie('token', jwt, { httpOnly: true, secure: true, sameSite: 'Strict' });
-    c.res.json();
+      return c.text(jwt)
+    } catch(e) {
+      console.log(e);
+      c.status(411);
+      return c.text('Invalid')
+    }
   })

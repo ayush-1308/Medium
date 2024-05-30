@@ -79,7 +79,7 @@ blogRouter.put('/',async (c) => {
     })
 })
 
-blogRouter.get('/:id', async (c) => {
+blogRouter.get('/search/:id', async (c) => {
     const id = c.req.param("id");
     const prisma = new PrismaClient({
       datasourceUrl: c.env.DATABASE_URL,
